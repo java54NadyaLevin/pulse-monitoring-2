@@ -10,23 +10,29 @@ import java.util.logging.Logger;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue;
+
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest.Builder;
+
 import static telran.pulse.monitoring.Constants.*;
 
 
 
 
 public class App {
-	// FIXME move to DynamoDB Table
-	HashMap<String, Integer> lastValues = new HashMap<>();
-	static Logger logger = Logger.getLogger("pulse-value-analyzer");
+	//HashMap<String, Integer> lastValues = new HashMap<>();
+	static DynamoDbClient client = DynamoDbClient.builder().build();
+	static Builder request;
+	static Logger logger = Logger.getLogger("pulse-jump-analyzer");
 	static {
 		loggerSetUp();
 		
 	}
 	
 	public void handleRequest(DynamodbEvent event, Context context) {
+		request = PutItemRequest.builder().tableName(LAST_VALUES_TABLE_NAME);
 		event.getRecords().forEach(r -> {
-
 			Map<String, AttributeValue> map = r.getDynamodb().getNewImage();
 			if (map == null) {
 				System.out.println("No new image found");
@@ -34,6 +40,7 @@ public class App {
 				String patientId = map.get("patientId").getN();
 				Integer currentValue = Integer.parseInt(map.get("value").getN());
 				String timestamp = map.get("timestamp").getN();
+				
 				Integer lastValue = lastValues.computeIfAbsent(patientId, k -> currentValue);
 				if (isJump(currentValue, lastValue)) {
 					jumpProcessing(patientId, currentValue, lastValue, timestamp);

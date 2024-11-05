@@ -1,15 +1,28 @@
 package telran.pulse.monitoring;
 
-import java.util.*;
-import java.util.logging.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.*;
+
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest.Builder;
-import static telran.pulse.monitoring.Constants.*;
+import static telran.pulse.monitoring.Constants.ABNORMAL_VALUES_TABLE_NAME;
+import static telran.pulse.monitoring.Constants.DEFAULT_LOGGER_LEVEL;
+import static telran.pulse.monitoring.Constants.LOGGER_LEVEL_ENV_VARIABLE;
+import static telran.pulse.monitoring.Constants.MAX_THRESHOLD_PULSE_VALUE;
+import static telran.pulse.monitoring.Constants.MIN_THRESHOLD_PULSE_VALUE;
+import static telran.pulse.monitoring.Constants.PATIENT_ID_ATTRIBUTE;
+import static telran.pulse.monitoring.Constants.TIMESTAMP_ATTRIBUTE;
+import static telran.pulse.monitoring.Constants.VALUE_ATTRIBUTE;
 
 public class App {
 
@@ -68,6 +81,7 @@ public class App {
 	private void processAbnormalPulseValue(Map<String, AttributeValue> map) {
 		logger.info(getLogMessage(map));
 		client.putItem(request.item(getPutItemMap(map)).build());
+		
 	}
 
 	private Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> getPutItemMap(
@@ -79,6 +93,7 @@ public class App {
 				.n(map.get(TIMESTAMP_ATTRIBUTE).getN()).build());
 		res.put(VALUE_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
 				.n(map.get(VALUE_ATTRIBUTE).getN()).build());
+	
 		return res;
 	}
 

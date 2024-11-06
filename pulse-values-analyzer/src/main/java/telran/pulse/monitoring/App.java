@@ -81,7 +81,6 @@ public class App {
 	private void processAbnormalPulseValue(Map<String, AttributeValue> map) {
 		logger.info(getLogMessage(map));
 		client.putItem(request.item(getPutItemMap(map)).build());
-		
 	}
 
 	private Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> getPutItemMap(

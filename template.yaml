@@ -13,7 +13,6 @@ Globals:
       Variables:
         LOGGER_LEVEL: INFO
     
-      
 
 Resources:
   #DynamoDB Streams specification

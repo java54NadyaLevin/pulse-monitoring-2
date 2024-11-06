@@ -13,5 +13,7 @@ public interface Constants {
     String JUMP_VALUES_TABLE_NAME = "pules_jump_values";
     String LOGGER_LEVEL_ENV_VARIABLE = "LOGGER_LEVEL";
     String DEFAULT_LOGGER_LEVEL = "INFO";
-    float FACTOR = 0.2f;
+    String FACTOR_ENV_VARIABLE = "FACTOR";
+    String DEFAULT_FACTOR = "0.2";
+
 }

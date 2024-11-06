@@ -1,7 +1,11 @@
 package telran.pulse.monitoring;
 
 import java.util.*;
-import java.util.logging.*;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
@@ -47,7 +51,18 @@ public class App {
 				.n(map.get(VALUE_ATTRIBUTE).getN()).build());
 		return res;
 	}
-	
+	private void jumpProcessing(String patientId, Integer currentValue, Integer lastValue, String timestamp) {
+		// FIXME move to DynamoDB Table
+		System.out.printf("Jump: patientId is %s,lastValue is %d, currentValue is %d, timestamp is %s\n",
+				patientId, lastValue, currentValue, timestamp);
+
+	}
+
+	private boolean isJump(Integer currentValue, Integer lastValue) {
+		float factor = getFloatFactor();
+		return (float) Math.abs(currentValue - lastValue) / lastValue > factor;
+	}
+
 	private static float getFloatFactor() {
 		String factor = System.getenv()
 		.getOrDefault(FACTOR_ENV_VARIABLE, DEFAULT_FACTOR);

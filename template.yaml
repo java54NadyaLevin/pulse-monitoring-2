@@ -15,7 +15,7 @@ Globals:
     
 
 Resources:
-  #DynamoDB Streams specification
+  #DynamoDB PulseValuesStream specification
   PulseValuesStream:
     Type: 'AWS::DynamoDB::Table'
     Properties:
@@ -35,6 +35,23 @@ Resources:
         WriteCapacityUnits: 5
       StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
+  #DynamoDB PulseLastValueStream specification
+  PulseLastValueStream:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: pulse_last_value
+      AttributeDefinitions:
+        - AttributeName: patientId
+          AttributeType: N
+      KeySchema:
+        - AttributeName: patientId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+  #DynamoDB PulseAbnormalValuesStream specification
   PulseAbnormalValuesStream:
     Type: 'AWS::DynamoDB::Table'
     Properties:
@@ -54,14 +71,29 @@ Resources:
         WriteCapacityUnits: 5
       StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
-         
-
+  #DynamoDB PulseJumpValuesStream specification      
+  MyDynamoDBTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: pulse_jump_values
+      AttributeDefinitions:
+        - AttributeName: patientId
+          AttributeType: N
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: patientId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
   # Define the publisher Lambda function with permissions
   PulseJumpAnalyzer:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: pulse-jump-analyzer
-      
       Policies:
         - Statement:
           - Effect: Allow
@@ -76,7 +108,30 @@ Resources:
             Stream: !GetAtt PulseValuesStream.StreamArn
             FilterCriteria: 
               Filters: 
-              - Pattern: '{"eventName": ["INSERT"]}'        
+              - Pattern: '{"eventName": ["INSERT"]}'  
+ # Define the publisher Lambda function with permissions
+  PulseJumpValues:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: pulse-jump-values
+      Environment:
+        Variables:
+          FACTOR: 0.2f
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Resource: '*'
+            Action:
+              - dynamodb:*
+      Events:
+        TableRecordChange:
+          Type: DynamoDB
+          Properties:
+            StartingPosition: LATEST
+            Stream: !GetAtt PulseLastValueStream.StreamArn
+            FilterCriteria: 
+              Filters: 
+              - Pattern: '{"eventName": ["MODIFY"]}'     
 # Define the publisher Lambda function with permissions
   PulseValuesAnalyzer:
     Type: 'AWS::Serverless::Function'

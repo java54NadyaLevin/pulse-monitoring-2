@@ -48,9 +48,9 @@ public class App {
 				if(isJump(currentValue, lastValue)){
 				client.putItem(request.item(getPutItemMap(newMap, oldMap)).build());
 				logger.finer("PatientID: " + newMap.get(PATIENT_ID_ATTRIBUTE).getN() 
-				+ "currentValue: " + newMap.get(VALUE_ATTRIBUTE).getN()
-				+ "previousValue: " + oldMap.get(VALUE_ATTRIBUTE).getN()
-				+ "timestamp: " + oldMap.get(TIMESTAMP_ATTRIBUTE).getN());
+				+ " currentValue: " + newMap.get(VALUE_ATTRIBUTE).getN()
+				+ " previousValue: " + oldMap.get(VALUE_ATTRIBUTE).getN()
+				+ " timestamp: " + oldMap.get(TIMESTAMP_ATTRIBUTE).getN());
 				}
 			} else {
 				logger.info(r.getEventName());

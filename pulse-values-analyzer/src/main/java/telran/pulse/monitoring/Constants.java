@@ -10,7 +10,7 @@ public interface Constants {
     int MAX_THRESHOLD_PULSE_VALUE = 190;
     String ABNORMAL_VALUES_TABLE_NAME = "pulse_abnormal_values";
     String LAST_VALUES_TABLE_NAME = "pulse_last_value";
-    String JUMP_VALUES_TABLE_NAME = "pules_jump_values";
+    String JUMP_VALUES_TABLE_NAME = "pulse_jump_values";
     String LOGGER_LEVEL_ENV_VARIABLE = "LOGGER_LEVEL";
     String DEFAULT_LOGGER_LEVEL = "INFO";
     String FACTOR_ENV_VARIABLE = "FACTOR";

@@ -15,52 +15,68 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest.Builder;
+import static telran.pulse.monitoring.Constants.CURRENT_VALUE_ATTRIBUTE;
 import static telran.pulse.monitoring.Constants.DEFAULT_FACTOR;
 import static telran.pulse.monitoring.Constants.DEFAULT_LOGGER_LEVEL;
 import static telran.pulse.monitoring.Constants.FACTOR_ENV_VARIABLE;
-import static telran.pulse.monitoring.Constants.LAST_VALUES_TABLE_NAME;
+import static telran.pulse.monitoring.Constants.JUMP_VALUES_TABLE_NAME;
 import static telran.pulse.monitoring.Constants.LOGGER_LEVEL_ENV_VARIABLE;
 import static telran.pulse.monitoring.Constants.PATIENT_ID_ATTRIBUTE;
+import static telran.pulse.monitoring.Constants.PREVIOUS_VALUE_ATTRIBUTE;
 import static telran.pulse.monitoring.Constants.TIMESTAMP_ATTRIBUTE;
 import static telran.pulse.monitoring.Constants.VALUE_ATTRIBUTE;
-
 
 public class App {
 	static DynamoDbClient client = DynamoDbClient.builder().build();
 	static Builder request;
-	static Logger logger = Logger.getLogger("pulse-jump-analyzer");
+	static Logger logger = Logger.getLogger("pulse-jump-values");
 	static {
 		loggerSetUp();
 		
 	}
 	
 	public void handleRequest(DynamodbEvent event, Context context) {
-		request = PutItemRequest.builder().tableName(LAST_VALUES_TABLE_NAME);
+		request = PutItemRequest.builder().tableName(JUMP_VALUES_TABLE_NAME);
 		event.getRecords().forEach(r -> {
-			Map<String, AttributeValue> map = r.getDynamodb().getNewImage();
-			if (map == null) {
-				System.out.println("No new image found");
-			} else if (r.getEventName().equals("INSERT")) {
-				client.putItem(request.item(getPutItemMap(map)).build());
+			Map<String, AttributeValue> newMap = r.getDynamodb().getNewImage();
+			Map<String, AttributeValue> oldMap = r.getDynamodb().getOldImage();
+			if (newMap == null || oldMap == null) {
+				logger.warning("No dynamoDB image was found");
+			} else if (r.getEventName().equals("MODIFY")) {
+				int currentValue = Integer.parseInt(newMap.get(VALUE_ATTRIBUTE).getN());
+				int lastValue = Integer.parseInt(oldMap.get(VALUE_ATTRIBUTE).getN());
+				if(isJump(currentValue, lastValue)){
+				client.putItem(request.item(getPutItemMap(newMap, oldMap)).build());
+				logger.finer("PatientID: " + newMap.get(PATIENT_ID_ATTRIBUTE).getN() 
+				+ "currentValue: " + newMap.get(VALUE_ATTRIBUTE).getN()
+				+ "previousValue: " + oldMap.get(VALUE_ATTRIBUTE).getN()
+				+ "timestamp: " + oldMap.get(TIMESTAMP_ATTRIBUTE).getN());
+				}
 			} else {
-				System.out.println(r.getEventName());
+				logger.info(r.getEventName());
 			}
-
 		});
 	}
 
 	private Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> getPutItemMap(
-			Map<String, AttributeValue> map) {
+			Map<String, AttributeValue> newMap, Map<String, AttributeValue> oldMap) {
 		Map<String, software.amazon.awssdk.services.dynamodb.model.AttributeValue> res = new HashMap<>();
 		res.put(PATIENT_ID_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
-				.n(map.get(PATIENT_ID_ATTRIBUTE).getN()).build());
-		res.put(VALUE_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
-				.n(map.get(VALUE_ATTRIBUTE).getN()).build());
+				.n(newMap.get(PATIENT_ID_ATTRIBUTE).getN()).build());
+		res.put(CURRENT_VALUE_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
+				.n(newMap.get(VALUE_ATTRIBUTE).getN()).build());
+		res.put(PREVIOUS_VALUE_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
+				.n(oldMap.get(VALUE_ATTRIBUTE).getN()).build());
 		res.put(TIMESTAMP_ATTRIBUTE, software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder()
-				.n(map.get(TIMESTAMP_ATTRIBUTE).getN()).build());
+				.n(newMap.get(TIMESTAMP_ATTRIBUTE).getN()).build());
 		return res;
 	}
 	
+	private boolean isJump(Integer currentValue, Integer lastValue) {
+		float factor = getFloatFactor();
+		return (float) Math.abs(currentValue - lastValue) / lastValue > factor;
+	}
+
 	private static float getFloatFactor() {
 		String factor = System.getenv()
 		.getOrDefault(FACTOR_ENV_VARIABLE, DEFAULT_FACTOR);
